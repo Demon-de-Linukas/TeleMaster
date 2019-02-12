@@ -133,6 +133,7 @@ def saveFile(foldername,fileName, text,client):
         fold_id = get_folder_id(client, foldername, summary_id)
 
     client.item(drive='me', id=fold_id).children[filp].upload(filp)
+    os.remove(filp)
 
 
 def get_folder_id(client, foldername, summary_id):

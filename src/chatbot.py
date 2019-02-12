@@ -24,9 +24,9 @@ cachePath='cache.csv'
 command_list = ['review', 'today', 'thiswk','lastwk','start', 'help','restart']
 fieldnames = ut.fieldnames
 username, password=ut.getUserData(path,'tick')
-logger.log('--> Initiating OneDrive Client')
+logger.info('--> Initiating OneDrive Client')
 client = onedrive.init_onedrive()
-logger.log('--> Initiating Ticktick Client')
+logger.info('--> Initiating Ticktick Client')
 driver = ut.login(username, password, headless=True, linux=False)
 time.sleep(8)
 
@@ -107,7 +107,7 @@ def get_input(messages):
         userid=str(message.from_user.id)
         if userid not in userList:
             init_cache(userid)
-        logger.log(str(message.text))
+        logger.info(str(message.text))
         if message.from_user.first_name.lower() != 'joe':
             return
         for cmd in command_list:
@@ -182,7 +182,7 @@ with open(cachePath, 'w', newline='',encoding='utf-8') as csvfile:
     spamwriter = csv.writer(csvfile)
     spamwriter.writerow(fieldnames )
 ti = datetime.datetime.now()
-logger.log('--> Bot started!')
+logger.info('--> Bot started!')
 print("Bot started: " + str(ti))
 print(str(time.time()-sttarttime))
 bot.set_update_listener(get_input)
