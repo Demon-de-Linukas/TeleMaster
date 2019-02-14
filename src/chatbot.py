@@ -10,7 +10,7 @@ import csv
 
 from TeleMaster.src import util as ut
 from TeleMaster.src import onedrive
-
+from TeleMaster.src.template import head,td_html,wk_html
 path_of_log='D:/Workspace/logs'
 path = ut.path_of_logindata
 
@@ -23,6 +23,8 @@ logger = ut.initlog()
 cachePath='cache.csv'
 command_list = ['review', 'today', 'thiswk','lastwk','start', 'help','restart']
 fieldnames = ut.fieldnames
+head_ch = head.replace('<br>', '')
+
 username, password=ut.getUserData(path,'tick')
 logger.info('--> Initiating OneDrive Client')
 client = onedrive.init_onedrive()
@@ -136,7 +138,10 @@ def get_input(messages):
             tody = ut.get_user_cache(userid, 'today')
             stars = ut.get_user_cache(userid, 'starTD')
             comm=ut.get_user_cache(userid, 'commentTD')
-            sumi = '<b>Summary of today</b>:\n\n%s\n---------\n<b>Stars</b>:\n%s\n\n---------\n\n<b>Comment</b>:\n\n%s' % (tody, stars, comm)
+            content=f'{tody}\n---------\n<b>Stars</b>:\n{stars}\n\n---------\n\n<b>Comment</b>:\n\n{comm}'
+            content_td=content.replace('\n','<br>')
+            susu = td_html.format(content_td=content_td)
+            sumi = head_ch + susu
             ut.saveFile(wk,'DailyReview-%s'%today,sumi,client)
             bot.send_message(userid,'Succeed!')
             ut.write_user_cache(userid, 'status', '0')
@@ -164,7 +169,11 @@ def get_input(messages):
             wk = wkk[:i + 1]
             stars = ut.get_user_cache(userid, 'starWK')
             comm=ut.get_user_cache(userid, 'commentWK')
-            sumi = '<b>Summary of week</b>:\n\n%s\n---------\n<b>Stars</b>:\n%s\n\n------\n\n<b>Comment</b>:\n\n%s' % (tody, stars, comm)
+
+            content = f'{wkk}\n---------\n<b>Stars</b>:\n{stars}\n\n---------\n\n<b>Comment</b>:\n\n{comm}'
+            content_td = content.replace('\n', '<br>')
+            susu = wk_html.format(week=wk,content_wk=content_td)
+            sumi = head_ch + susu
             ut.saveFile(wk,'WeeklyReview-%s'%wk,sumi,client)
             bot.send_message(userid,'Succeed!')
             ut.write_user_cache(userid, 'status', '0')

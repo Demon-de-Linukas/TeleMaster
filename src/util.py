@@ -116,8 +116,7 @@ def write_user_cache(userid, key, value):
             wrier.writerow(wowow)
 
 
-def saveFile(foldername,fileName, text,client):
-    tt = text.replace('\n','<br>')
+def saveFile(foldername,fileName, tt,client):
     filp='%s.html'%fileName
     with open(filp, 'w', encoding='utf-8') as file:
         file.write(tt)
