@@ -1,7 +1,6 @@
+# -*- coding: utf-8 -*-
 import datetime
 import telebot as tb
-import random
-import re
 import requests
 import urllib3
 import socket
@@ -29,7 +28,7 @@ username, password=ut.getUserData(path,'tick')
 logger.info('--> Initiating OneDrive Client')
 client = onedrive.init_onedrive()
 logger.info('--> Initiating Ticktick Client')
-driver = ut.login(username, password, headless=True, linux=False)
+driver = ut.login(username, password, headless=False, linux=False)
 time.sleep(8)
 
 
@@ -59,6 +58,19 @@ def sartInfo(message):
     ut.write_user_cache(userid,'today',today)
     week = ut.get_week(driver)
     ut.write_user_cache(userid,'week',week)
+    # driver.close()
+    bot.send_message(message.chat.id, 'Finished Initiating!')
+    ut.write_user_cache(userid,'status','1')
+    return
+
+
+@bot.message_handler(commands=['getlog'])
+def getlog(message):
+    global driver
+    userid = str(message.from_user.id)
+    # time.sleep(2)
+    today=ut.get_today(driver)
+    week = ut.get_week(driver)
     # driver.close()
     bot.send_message(message.chat.id, 'Finished Initiating!')
     ut.write_user_cache(userid,'status','1')
@@ -109,7 +121,7 @@ def get_input(messages):
         userid=str(message.from_user.id)
         if userid not in userList:
             init_cache(userid)
-        logger.info(str(message.text))
+        logger.info(u'%s'%str(message.text))
         if message.from_user.first_name.lower() != 'joe':
             return
         for cmd in command_list:
@@ -124,8 +136,8 @@ def get_input(messages):
             ut.write_user_cache(userid, 'commentTD', message.text)
             tody = ut.get_user_cache(userid, 'today')
             stars = ut.get_user_cache(userid, 'starTD')
-            sumi = '<b>Summary of today</b>:\n\n%s\n---------\n<b>Stars</b>:\n%s\n\n---------\n\n<b>Comment</b>:\n\n%s' % (tody, stars, message.text)
-            bot.send_message(userid,sumi,parse_mode='HTML')
+            sumi = '*Summary of today*:\n\n%s\n---------\n*Stars*:\n%s\n\n---------\n\n*Comment*:\n\n%s' % (tody, stars, message.text)
+            bot.send_message(userid,sumi,parse_mode='Markdown')
             ut.write_user_cache(userid, 'status', 'svTD')
             bot.send_message(message.chat.id, 'Do you want to save it?')
         if ut.get_user_cache(userid,'status')=='svTD' and 'yes' in message.text.lower():
@@ -157,8 +169,8 @@ def get_input(messages):
             ut.write_user_cache(userid, 'commentWK', message.text)
             tody = ut.get_user_cache(userid, 'week')
             stars = ut.get_user_cache(userid, 'starWK')
-            sumi = '<b>Summary of week</b>:\n\n%s\n---------\n<b>Stars</b>:\n%s\n\n---------\n\n<b>Comment</b>:\n\n%s' % (tody, stars, message.text)
-            bot.send_message(userid,sumi,parse_mode='HTML')
+            sumi = '*Summary of week*:\n\n%s\n---------\n*Stars*:\n%s\n\n---------\n\n*Comment*:\n\n%s' % (tody, stars, message.text)
+            bot.send_message(userid,sumi,parse_mode='Markdown')
             ut.write_user_cache(userid, 'status', 'svWK')
             bot.send_message(message.chat.id, 'Do you want to save it?')
         if ut.get_user_cache(userid,'status')=='svWK' and 'yes' in message.text.lower():
@@ -201,4 +213,5 @@ except (OSError, TimeoutError, ConnectionResetError, requests.exceptions.ReadTim
         socket.timeout, RecursionError, urllib3.exceptions.ProtocolError,requests.exceptions.ConnectionError) as e:
     logger.error('---> %s' % str(e))
     time.sleep(0.5)
+
 

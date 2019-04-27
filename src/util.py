@@ -45,18 +45,33 @@ def get_week(driver):
         days.click()
         driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[1]/div[1]/ul/li[3]/a').click()
         time.sleep(1)
+    driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[2]/div[1]/a').click()
+    driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[2]/div[1]/ul/li[3]').click()
     suma=driver.find_element_by_xpath('//*[@id="summary-text"]')
     ttt = suma.get_property('value')
     return ttt
 
 def get_today(driver):
     driver.get('https://www.ticktick.com/#q/all/summary')
-    # time.sleep(5)
+    time.sleep(5)
     days=driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[1]/div[1]/a/span')
     if days.text!='今天':
         days.click()
         driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[1]/div[1]/ul/li[1]/a').click()
         time.sleep(1)
+    driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[2]/div[2]/a').click()
+    list=driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[2]/div[2]/div/div[3]/div[1]/div[1]')
+    #Check the shown property
+    attrib_list=['detail','progress','list']
+    for attrib in attrib_list:
+        element = list.find_elements_by_css_selector("[data-key ='%s']"%attrib)
+        if 'selected-item' not in element[0].get_attribute('class'):
+            element[0].click()
+    driver.find_element_by_xpath('//*[@id="summary-detail-control-confirm"]').click()
+
+    driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[2]/div[1]/a').click()
+    driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[2]/div[1]/ul/li[1]').click()
+
     suma=driver.find_element_by_xpath('//*[@id="summary-text"]')
     ttt = suma.get_property('value')
     return ttt
