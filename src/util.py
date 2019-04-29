@@ -8,12 +8,12 @@ import onedrivesdk
 import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from TeleMaster.src import cypter as cp
+from src import cypter as cp
 from csv import Error
 
 logPath = 'cache.csv'
 fieldnames = ['userID','status','today','week','starTD','starWK','commentTD','commentWK']
-path_of_logindata = 'D:\Workspace_Pycharm/loginData.csv'
+path_of_logindata = 'D:\Workspace/loginData.csv'
 
 
 def login(username, password,headless,linux):
@@ -26,7 +26,7 @@ def login(username, password,headless,linux):
     if linux:
         browser = webdriver.Chrome(chrome_options=options, executable_path='/usr/lib/chromium-browser/chromedriver')
     else:
-        browser = webdriver.Chrome(chrome_options=options, executable_path='D:\Apps\Chromedriver\chromedriver_win32/chromedriver.exe')
+        browser = webdriver.Chrome(chrome_options=options)
     browser.get("https://www.ticktick.com/signin")
     time.sleep(2)
     usernameBox = browser.find_element_by_name('email')
@@ -40,10 +40,10 @@ def login(username, password,headless,linux):
 
 def get_week(driver):
     driver.get('https://www.ticktick.com/#q/all/summary')
-    days=driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[1]/div[1]/a/span')
+    days=driver.find_element_by_xpath('//*[@id="container-main"]/div[3]/div/div[1]/div/div[1]/div[1]/div/a/span')
     if '本周' not in days.text:
         days.click()
-        driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[1]/div[1]/ul/li[3]/a').click()
+        driver.find_element_by_xpath('/html/body/div[10]/div/div/ul/li[1]/a').click()
         time.sleep(1)
     driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[2]/div[1]/a').click()
     driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[2]/div[1]/ul/li[3]').click()
@@ -51,30 +51,42 @@ def get_week(driver):
     ttt = suma.get_property('value')
     return ttt
 
-def get_today(driver):
+
+def get_today_and_thiswk(driver):
     driver.get('https://www.ticktick.com/#q/all/summary')
     time.sleep(5)
-    days=driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[1]/div[1]/a/span')
+    days=driver.find_element_by_xpath('//*[@id="container-main"]/div[3]/div/div[1]/div/div[1]/div[1]/div/a/span')
     if days.text!='今天':
         days.click()
-        driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[1]/div[1]/ul/li[1]/a').click()
+        driver.find_element_by_xpath('/html/body/div[10]/div/div/ul/li[1]/a').click()
         time.sleep(1)
-    driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[2]/div[2]/a').click()
-    list=driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[2]/div[2]/div/div[3]/div[1]/div[1]')
+    #打开选项表
+    driver.find_element_by_xpath('//*[@id="container-main"]/div[3]/div/div[1]/div/div[2]/div[2]/a').click()
+    #得到选项表信息
+    detailslist = driver.find_element_by_xpath("//*[contains(@class, 'list-wrapper antiscroll-wrap')]")
     #Check the shown property
-    attrib_list=['detail','progress','list']
+    attrib_list=['完成日期','进度','所属清单']
     for attrib in attrib_list:
-        element = list.find_elements_by_css_selector("[data-key ='%s']"%attrib)
-        if 'selected-item' not in element[0].get_attribute('class'):
-            element[0].click()
-    driver.find_element_by_xpath('//*[@id="summary-detail-control-confirm"]').click()
-
-    driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[2]/div[1]/a').click()
-    driver.find_element_by_xpath('//*[@id="summary-view"]/div/div/div[1]/div/div[2]/div[1]/ul/li[1]').click()
-
-    suma=driver.find_element_by_xpath('//*[@id="summary-text"]')
-    ttt = suma.get_property('value')
-    return ttt
+        xpath = "//li[text()='%s']" % attrib
+        element = detailslist.find_element_by_xpath(xpath)
+        if 'option-item-selected' not in element.get_attribute('class'):
+            element.click()
+    #点击确认
+    driver.find_element_by_xpath("//*[contains(@class, 'btn btn-confirm btn-primary btn-tny')]").click()
+    #更改排序方式
+    driver.find_element_by_xpath('//*[@id="container-main"]/div[3]/div/div[1]/div/div[2]/div[1]/a').click()
+    driver.find_element_by_xpath("//a[text()='按完成度']").click()
+    #得到文本目标
+    suma_td=driver.find_element_by_xpath('//*[@id="summary-text"]')
+    today = suma_td.get_property('value')
+    if '本周' not in days.text:
+        days.click()
+        driver.find_element_by_xpath('/html/body/div[10]/div/div/ul/li[3]/a').click()
+        time.sleep(1)
+    # 得到文本目标
+    suma_wk = driver.find_element_by_xpath('//*[@id="summary-text"]')
+    thisweek = suma_wk.get_property('value')
+    return today,thisweek
 
 
 def initlog():

@@ -4,7 +4,7 @@ import time
 from selenium.webdriver.chrome.options import Options
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from TeleMaster.src import util as ut
+from src import util as ut
 
 path = ut.path_of_logindata
 
