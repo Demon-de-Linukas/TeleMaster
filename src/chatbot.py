@@ -6,11 +6,14 @@ import urllib3
 import socket
 import time
 import csv
+import sys
+sys.path.append("D:\Workspace\TeleMaster/")
+sys.path.append("/home/pi/TeleMaster/")
 
 from src import util as ut
 from src import onedrive
 from src.template import head,td_html,wk_html
-path_of_log='D:/Workspace/logs'
+path_of_log='/home/pi/TeleMaster'
 path = ut.path_of_logindata
 
 
@@ -20,7 +23,7 @@ token = tk
 bot = tb.TeleBot(token)
 logger = ut.initlog()
 cachePath='cache.csv'
-command_list = ['review', 'today', 'thiswk','lastwk','start', 'help','restart']
+command_list = ['today', 'yesterday','thiswk','lastwk','start','library']
 fieldnames = ut.fieldnames
 head_ch = head.replace('<br>', '')
 
@@ -28,7 +31,7 @@ username, password=ut.getUserData(path,'tick')
 logger.info('--> Initiating OneDrive Client')
 client = onedrive.init_onedrive()
 logger.info('--> Initiating Ticktick Client')
-driver = ut.login(username, password, headless=False, linux=False)
+driver = ut.login(username, password, headless=True, linux=False)
 time.sleep(8)
 
 
@@ -40,55 +43,38 @@ def sartInfo(message):
     return
 
 
-@bot.message_handler(commands=['restart'])
-def sartInfo(message):
+@bot.message_handler(commands=['library'])
+def lib(message):
     userid = str(message.from_user.id)
-    init_cache(userid)
-    for cmd in command_list:
-        bot.send_message(userid,'/%s'%cmd)
-    return
-
-
-@bot.message_handler(commands=['review'])
-def sartInfo(message):
-    global driver
-    userid = str(message.from_user.id)
-    # time.sleep(2)
-    td, week =ut.get_today_and_thiswk(driver)
-    ut.write_user_cache(userid,'today',td)
-    ut.write_user_cache(userid,'week',week)
-    # driver.close()
-    bot.send_message(message.chat.id, 'Finished Initiating!')
-    ut.write_user_cache(userid,'status','1')
-    return
-
-
-@bot.message_handler(commands=['getlog'])
-def getlog(message):
-    global driver
-    userid = str(message.from_user.id)
-    # time.sleep(2)
-    today=ut.get_today(driver)
-    week = ut.get_week(driver)
-    # driver.close()
-    bot.send_message(message.chat.id, 'Finished Initiating!')
-    ut.write_user_cache(userid,'status','1')
+    info=ut.get_seat_info()
+    bot.send_message(userid,'%s'%info)
     return
 
 
 @bot.message_handler(commands=['today'])
 def today(message):
     userid = str(message.from_user.id)
-    bot.send_message(message.chat.id,'今日总结:\n%s'%(ut.get_user_cache(userid,'today')))
+    td = ut.get_Summary(driver, '今天')
+    ut.write_user_cache(userid, 'summary', td)
+    bot.send_message(message.chat.id,'今日总结:\n%s'%td)
     bot.send_message(message.chat.id, '请评价今日(⭐)!')
     ut.write_user_cache(userid,'status','starsTD')
+    ut.write_user_cache(userid,'time',datetime.date.today())
     return
+
 
 @bot.message_handler(commands=['thisWK','thiswk'])
 def thisWK(message):
     userid = str(message.from_user.id)
-    bot.send_message(message.chat.id,'本周周报:\n%s'%(ut.get_user_cache(userid,'week')))
+    td = ut.get_Summary(driver, '本周')
+    ut.write_user_cache(userid, 'summary', td)
+    bot.send_message(message.chat.id,'本周周报:\n%s'%td)
     bot.send_message(message.chat.id, '请评价本周(⭐)!')
+    i = 8
+    while td[i] != '日':
+        i += 1
+    wk = td[:i + 1]
+    ut.write_user_cache(userid, 'time', wk)
     ut.write_user_cache(userid,'status','starsWK')
     return
 
@@ -96,19 +82,28 @@ def thisWK(message):
 @bot.message_handler(commands=['lastWK','lastwk'])
 def lastWK(message):
     userid = str(message.from_user.id)
-    driver.get('https://www.ticktick.com/#q/all/summary')
-    time.sleep(5)
-    days = driver.find_element_by_xpath('//*[@id="container-main"]/div[3]/div/div[1]/div/div[1]/div[1]/div/a/span')
-    if '上周' not in days.text:
-        days.click()
-        driver.find_element_by_xpath('/html/body/div[10]/div/div/ul/li[4]/a').click()
-        time.sleep(1)
-    suma = driver.find_element_by_xpath('//*[@id="summary-text"]')
-    ttt = suma.get_property('value')
-    bot.send_message(message.chat.id,'上周周报:\n%s'%(ttt))
+    td = ut.get_Summary(driver, '上周')
+    ut.write_user_cache(userid, 'summary', td)
+    bot.send_message(message.chat.id, '上周周报:\n%s' %td)
     bot.send_message(message.chat.id, '请评价上周(⭐)!')
-    ut.write_user_cache(userid,'week',ttt)
-    ut.write_user_cache(userid,'status','starsWK')
+    i = 8
+    while td[i] != '日':
+        i += 1
+    wk = td[:i + 1]
+    ut.write_user_cache(userid, 'time', wk)
+    ut.write_user_cache(userid, 'status', 'starsWK')
+    return
+
+
+@bot.message_handler(commands=['yesterday','yd'])
+def yesterdAY(message):
+    userid = str(message.from_user.id)
+    td = ut.get_Summary(driver, '昨天')
+    ut.write_user_cache(userid, 'summary', td)
+    bot.send_message(message.chat.id, '今日总结:\n%s' % td)
+    bot.send_message(message.chat.id, '请评价今日(⭐)!')
+    ut.write_user_cache(userid, 'status', 'starsTD')
+    ut.write_user_cache(userid, 'time', ut.get_yesterday())
     return
 
 
@@ -128,62 +123,59 @@ def get_input(messages):
             if message.text == '/%s' % cmd:
                 return
         if ut.get_user_cache(userid,'status')=='starsTD':
-           ut.write_user_cache(userid,'starTD',ut.convert_star(message.text))
+           ut.write_user_cache(userid,'star',ut.convert_star(message.text))
            ut.write_user_cache(userid, 'status', 'commentTD')
            bot.send_message(message.chat.id, '评论与小结!')
            return
         if ut.get_user_cache(userid,'status')=='commentTD':
-            ut.write_user_cache(userid, 'commentTD', message.text)
-            tody = ut.get_user_cache(userid, 'today')
-            stars = ut.get_user_cache(userid, 'starTD')
-            sumi = '*Summary of today*:\n\n%s\n---------\n*Stars*:\n%s\n\n---------\n\n*Comment*:\n\n%s' % (tody, stars, message.text)
-            bot.send_message(userid,sumi,parse_mode='Markdown')
+            ut.write_user_cache(userid, 'comment', message.text)
+            tody = ut.get_user_cache(userid, 'summary')
+            stars = ut.get_user_cache(userid, 'star')
+            sumi = 'Summary of today:\n\n%s\n---------\nStars:\n%s\n\n---------\n\nComment:\n\n%s' % (tody, stars, message.text)
+            bot.send_message(userid,sumi)
             ut.write_user_cache(userid, 'status', 'svTD')
             bot.send_message(message.chat.id, '是否保存?')
             return
         if ut.get_user_cache(userid,'status')=='svTD' and ('是' in message.text or '保存' in message.text or '好' in message.text):
-            wkk = ut.get_user_cache(userid, 'week')
+            wkk = ut.get_user_cache(userid, 'summary')
             i=8
             while wkk[i]!='日':
                 i+=1
             wk = wkk[:i+1]
             month_num = datetime.datetime.today().month
-            today = datetime.date.today()
-            tody = ut.get_user_cache(userid, 'today')
-            stars = ut.get_user_cache(userid, 'starTD')
-            comm=ut.get_user_cache(userid, 'commentTD')
+            time = ut.get_user_cache(userid, 'time')
+            tody = ut.get_user_cache(userid, 'summary')
+            stars = ut.get_user_cache(userid, 'star')
+            comm=ut.get_user_cache(userid, 'comment')
             content = '%s\n---------\n<b>Stars</b>:\n%s\n\n---------\n\n<b>Comment</b>:\n\n%s'%(tody,stars,comm)
             content_td=content.replace('\n','<br>')
             susu = td_html.format(content_td=content_td)
             sumi = head_ch + susu
-            ut.saveFile('%s月' % month_num, '每日回顾-%s'%today,sumi,client)
+            ut.saveFile('%s月' % month_num, '每日回顾-%s'%time,sumi,client)
             bot.send_message(userid,'Succeed!')
             ut.write_user_cache(userid, 'status', '0')
             bot.send_message(message.chat.id, 'It is done.')
             return
         if ut.get_user_cache(userid,'status')=='starsWK':
-           ut.write_user_cache(userid,'starWK',ut.convert_star(message.text))
+           ut.write_user_cache(userid,'star',ut.convert_star(message.text))
            ut.write_user_cache(userid, 'status', 'commentWK')
            bot.send_message(message.chat.id, '评论与小结!')
            return
         if ut.get_user_cache(userid,'status')=='commentWK':
-            ut.write_user_cache(userid, 'commentWK', message.text)
-            tody = ut.get_user_cache(userid, 'week')
-            stars = ut.get_user_cache(userid, 'starWK')
-            sumi = '*Summary of week*:\n\n%s\n---------\n*Stars*:\n%s\n\n---------\n\n*Comment*:\n\n%s' % (tody, stars, message.text)
-            bot.send_message(userid,sumi,parse_mode='Markdown')
+            ut.write_user_cache(userid, 'comment', message.text)
+            tody = ut.get_user_cache(userid, 'summary')
+            stars = ut.get_user_cache(userid, 'star')
+            sumi = 'Summary of week:\n\n%s\n---------\nStars:\n%s\n\n---------\n\nComment:\n\n%s' % (tody, stars, message.text)
+            bot.send_message(userid,sumi)
             ut.write_user_cache(userid, 'status', 'svWK')
             bot.send_message(message.chat.id, '是否保存?')
             return
         if ut.get_user_cache(userid,'status')=='svWK' and ('是' in message.text or '保存' in message.text or '好' in message.text):
-            wkk = ut.get_user_cache(userid, 'week')
-            i = 8
-            while wkk[i] != '日':
-                i += 1
-            wk = wkk[:i + 1]
+            wkk = ut.get_user_cache(userid, 'summary')
+            wk = ut.get_user_cache(userid, 'time')
             month_num = datetime.datetime.today().month
-            stars = ut.get_user_cache(userid, 'starWK')
-            comm = ut.get_user_cache(userid, 'commentWK')
+            stars = ut.get_user_cache(userid, 'star')
+            comm = ut.get_user_cache(userid, 'comment')
             content = '%s\n---------\n<b>Stars</b>:\n%s\n\n---------\n\n<b>Comment</b>:\n\n%s'%(wkk,stars,comm)
             content_td = content.replace('\n', '<br>')
             susu = wk_html.format(week=wk,content_wk=content_td)

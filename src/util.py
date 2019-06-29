@@ -3,6 +3,10 @@ import logging
 import time
 import csv
 import onedrivesdk
+import sys
+import requests as rq
+import re
+sys.path.append("D:\Workspace\TeleMaster/")
 
 
 import datetime
@@ -12,8 +16,9 @@ from src import cypter as cp
 from csv import Error
 
 logPath = 'cache.csv'
-fieldnames = ['userID','status','today','week','starTD','starWK','commentTD','commentWK']
-path_of_logindata = 'D:\Workspace/loginData.csv'
+fieldnames = ['userID','status','summary','time','star','comment']
+path_of_logindata = '/home/pi/loginData.csv'
+#path_of_logindata = 'D:/Workspace/loginData.csv'
 
 
 def login(username, password,headless,linux):
@@ -24,7 +29,7 @@ def login(username, password,headless,linux):
     if headless:
         options.add_argument('headless')
     if linux:
-        browser = webdriver.Chrome(chrome_options=options, executable_path='/usr/lib/chromium-browser/chromedriver')
+        browser = webdriver.Chrome(chrome_options=options)#, executable_path='/usr/lib/chromium-browser/chromedriver')
     else:
         browser = webdriver.Chrome(chrome_options=options)
     browser.get("https://www.ticktick.com/signin")
@@ -52,14 +57,21 @@ def get_week(driver):
     return ttt
 
 
-def get_today_and_thiswk(driver):
+def get_Summary(driver, timeRef):
     driver.get('https://www.ticktick.com/#q/all/summary')
     time.sleep(5)
     days=driver.find_element_by_xpath('//*[@id="container-main"]/div[3]/div/div[1]/div/div[1]/div[1]/div/a/span')
-    if days.text!='今天':
-        days.click()
-        driver.find_element_by_xpath('/html/body/div[10]/div/div/ul/li[1]/a').click()
-        time.sleep(1)
+    i=1
+    while i<6:
+        if timeRef not in days.text:
+            days.click()
+            driver.find_element_by_xpath('/html/body/div[10]/div/div/ul/li[%s]/a'%i).click()
+            time.sleep(1)
+            days = driver.find_element_by_xpath(
+                '//*[@id="container-main"]/div[3]/div/div[1]/div/div[1]/div[1]/div/a/span')
+            i+=1
+        else:
+            break
     #打开选项表
     driver.find_element_by_xpath('//*[@id="container-main"]/div[3]/div/div[1]/div/div[2]/div[2]/a').click()
     #得到选项表信息
@@ -79,19 +91,44 @@ def get_today_and_thiswk(driver):
     #得到文本目标
     suma_td=driver.find_element_by_xpath('//*[@id="summary-text"]')
     today = suma_td.get_property('value')
+
+    return today
+
+
+def get_thiswk(driver):
+    driver.get('https://www.ticktick.com/#q/all/summary')
+    time.sleep(5)
+    days=driver.find_element_by_xpath('//*[@id="container-main"]/div[3]/div/div[1]/div/div[1]/div[1]/div/a/span')
     if '本周' not in days.text:
         days.click()
         driver.find_element_by_xpath('/html/body/div[10]/div/div/ul/li[3]/a').click()
         time.sleep(1)
+    # 打开选项表
+    driver.find_element_by_xpath('//*[@id="container-main"]/div[3]/div/div[1]/div/div[2]/div[2]/a').click()
+    # 得到选项表信息
+    detailslist = driver.find_element_by_xpath("//*[contains(@class, 'list-wrapper antiscroll-wrap')]")
+    # Check the shown property
+    attrib_list = ['完成日期', '进度', '所属清单']
+    for attrib in attrib_list:
+        xpath = "//li[text()='%s']" % attrib
+        element = detailslist.find_element_by_xpath(xpath)
+        if 'option-item-selected' not in element.get_attribute('class'):
+            element.click()
+    # 点击确认
+    driver.find_element_by_xpath("//*[contains(@class, 'btn btn-confirm btn-primary btn-tny')]").click()
+    # 更改排序方式
+    driver.find_element_by_xpath('//*[@id="container-main"]/div[3]/div/div[1]/div/div[2]/div[1]/a').click()
+    driver.find_element_by_xpath("//a[text()='按完成度']").click()
     # 得到文本目标
     suma_wk = driver.find_element_by_xpath('//*[@id="summary-text"]')
     thisweek = suma_wk.get_property('value')
-    return today,thisweek
+    return thisweek
+
 
 
 def initlog():
     today = datetime.date.today()
-    logadress='logs/%s/'%today
+    logadress='D:\Workspace\TeleMaster/logs/%s/'%today
     try:
         os.mkdir(logadress)
     except (FileExistsError,FileNotFoundError) as e:
@@ -209,6 +246,50 @@ def enCode(code):
 
 def deCode(code):
     return cp.deCode(code)
+
+
+def get_seat_info():
+    html=rq.get('https://seatfinder.bibliothek.kit.edu/karlsruhe/getdata.'
+                'php?callback=jQuery21407451994564516051_1559296485007&location%5B0%5D=LSG%2CLSM%2CLST%'
+                '2CLSN%2CLSW%2CLBS%2CBIB-N%2CFBC%2CFBP%2CLAF%2CFBA%2CFBI%2CFBM%2CFBW%2CFBH%2CFBD%2CTheaBib%2CBLB%2CWIS&values'
+                '%5B0%5D=seatestimate%2Cmanualcount&after%5B0%5D=-10800seconds&before%5B0%5D=now&limit%5B0%5D=-17&location%5'
+                'B1%5D=LSG%2CLSM%2CLST%2CLSN%2CLSW%2CLBS%2CBIB-N%2CFBC%2CFBP%2CLAF%2CFBA%2CFBI%2CFBM%2CFBW%2CFBH%2CFBD%2CTheaBib%2CBLB%2C'
+                'WIS&values%5B1%5D=location&after%5B1%5D=&before%5B1%5D=now&limit%5B1%5D=1&refresh=&_=1559296485011')
+
+    stage_tag={'LSG':'3rd floor new','LSM':'3rd floor old','LST':'2nd floor new','LSN':'2nd floor old','LSW':'1st floor new','LBS':'1st floor old'}
+    infodict={}
+    total=0
+    tfree=0
+
+    for stage in stage_tag:
+        pattern = r'name":"%s","occ.*?{"timestamp":'%stage
+        seatinfo=re.findall(pattern,html.text)
+        if len(seatinfo) >0:
+            occupied=re.findall(r'"occupied_seats".*?,',seatinfo[0])[0]
+            onumber=re.findall(r'[0-9]{1,2}',occupied)[0]
+            total+=int(onumber)
+            free=re.findall(r'"free_seats".*?}',seatinfo[0])[0]
+            fnumber=re.findall(r'[0-9]{1,2}',free)[0]
+            total+=int(fnumber)
+            tfree+=int(fnumber)
+            percent=int(int(fnumber)*100/(int(fnumber)+int(onumber)))
+            infodict[stage_tag[stage]]=str(percent)+'%'
+        else:
+            infodict[stage_tag[stage]]='No info'
+
+
+    result='Available seats in library:\n'
+    for text in infodict:
+        result+='%s: %s.\n'%(text,infodict[text])
+    result+='Total available seats: %s'%(str(int(tfree*100/total))+'%')
+    return result
+
+
+def get_yesterday():
+    today = datetime.date.today()
+    oneday = datetime.timedelta(days=1)
+    yesterday = today - oneday
+    return yesterday
 
 # path = 'D:\Workspace_Pycharm/loginData.csv'
 # newUserData(path)
