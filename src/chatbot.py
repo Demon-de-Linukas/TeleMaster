@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import datetime
 import telebot as tb
@@ -7,6 +8,7 @@ import socket
 import time
 import csv
 import sys
+import os
 sys.path.append("D:\Workspace\TeleMaster/")
 sys.path.append("/home/pi/TeleMaster/")
 
@@ -16,14 +18,14 @@ from src.template import head,td_html,wk_html
 path_of_log='/home/pi/TeleMaster'
 path = ut.path_of_logindata
 
-
+time.sleep(30)
 sttarttime=time.time()
 us,tk=ut.getUserData(path,'teleToken')
 token = tk
 bot = tb.TeleBot(token)
 logger = ut.initlog()
 cachePath='cache.csv'
-command_list = ['today', 'yesterday','thiswk','lastwk','start','library']
+command_list = ['today', 'yesterday','thiswk','lastwk','start','library','film']
 fieldnames = ut.fieldnames
 head_ch = head.replace('<br>', '')
 
@@ -31,7 +33,7 @@ username, password=ut.getUserData(path,'tick')
 logger.info('--> Initiating OneDrive Client')
 client = onedrive.init_onedrive()
 logger.info('--> Initiating Ticktick Client')
-driver = ut.login(username, password, headless=True, linux=False)
+driver = ut.login(username, password, headless=True, linux=True)
 time.sleep(8)
 
 
@@ -51,10 +53,17 @@ def lib(message):
     return
 
 
+@bot.message_handler(commands=['film'])
+def lib(message):
+    userid = str(message.from_user.id)
+    os.system('python3 /home/pi/FilmScrap/src/thefilmwacher.py')
+    bot.send_message(userid,'Sending EMail...')
+    return
+
 @bot.message_handler(commands=['today'])
 def today(message):
     userid = str(message.from_user.id)
-    td = ut.get_Summary(driver, '今天')
+    td = ut.get_Summary(driver, 'Today')
     ut.write_user_cache(userid, 'summary', td)
     bot.send_message(message.chat.id,'今日总结:\n%s'%td)
     bot.send_message(message.chat.id, '请评价今日(⭐)!')
@@ -66,14 +75,12 @@ def today(message):
 @bot.message_handler(commands=['thisWK','thiswk'])
 def thisWK(message):
     userid = str(message.from_user.id)
-    td = ut.get_Summary(driver, '本周')
+    td = ut.get_Summary(driver, 'This Week')
     ut.write_user_cache(userid, 'summary', td)
     bot.send_message(message.chat.id,'本周周报:\n%s'%td)
     bot.send_message(message.chat.id, '请评价本周(⭐)!')
-    i = 8
-    while td[i] != '日':
-        i += 1
-    wk = td[:i + 1]
+    i=td.index('Completed')  
+    wk = td[:i - 2]
     ut.write_user_cache(userid, 'time', wk)
     ut.write_user_cache(userid,'status','starsWK')
     return
@@ -82,14 +89,15 @@ def thisWK(message):
 @bot.message_handler(commands=['lastWK','lastwk'])
 def lastWK(message):
     userid = str(message.from_user.id)
-    td = ut.get_Summary(driver, '上周')
+    td = ut.get_Summary(driver, 'Last Week')
     ut.write_user_cache(userid, 'summary', td)
     bot.send_message(message.chat.id, '上周周报:\n%s' %td)
     bot.send_message(message.chat.id, '请评价上周(⭐)!')
-    i = 8
-    while td[i] != '日':
-        i += 1
-    wk = td[:i + 1]
+    i=td.index('Completed')  
+#    i = 8
+#    while td[i] != '日':
+#        i += 1
+    wk = td[:i - 2]
     ut.write_user_cache(userid, 'time', wk)
     ut.write_user_cache(userid, 'status', 'starsWK')
     return
@@ -98,7 +106,7 @@ def lastWK(message):
 @bot.message_handler(commands=['yesterday','yd'])
 def yesterdAY(message):
     userid = str(message.from_user.id)
-    td = ut.get_Summary(driver, '昨天')
+    td = ut.get_Summary(driver, 'Yesterday')
     ut.write_user_cache(userid, 'summary', td)
     bot.send_message(message.chat.id, '今日总结:\n%s' % td)
     bot.send_message(message.chat.id, '请评价今日(⭐)!')
@@ -137,11 +145,13 @@ def get_input(messages):
             bot.send_message(message.chat.id, '是否保存?')
             return
         if ut.get_user_cache(userid,'status')=='svTD' and ('是' in message.text or '保存' in message.text or '好' in message.text):
-            wkk = ut.get_user_cache(userid, 'summary')
-            i=8
-            while wkk[i]!='日':
-                i+=1
-            wk = wkk[:i+1]
+            td = ut.get_user_cache(userid, 'summary')
+#            i=0
+#            while wkk[i]!='日':
+#                i+=1
+#            wk = wkk[:i+1]
+            i=td.index('Completed')  
+            wk = td[:i - 2]
             month_num = datetime.datetime.today().month
             time = ut.get_user_cache(userid, 'time')
             tody = ut.get_user_cache(userid, 'summary')

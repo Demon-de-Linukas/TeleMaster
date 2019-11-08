@@ -77,7 +77,7 @@ def get_Summary(driver, timeRef):
     #得到选项表信息
     detailslist = driver.find_element_by_xpath("//*[contains(@class, 'list-wrapper antiscroll-wrap')]")
     #Check the shown property
-    attrib_list=['完成日期','进度','所属清单']
+    attrib_list=['Detail','Progress','List']
     for attrib in attrib_list:
         xpath = "//li[text()='%s']" % attrib
         element = detailslist.find_element_by_xpath(xpath)
@@ -87,7 +87,7 @@ def get_Summary(driver, timeRef):
     driver.find_element_by_xpath("//*[contains(@class, 'btn btn-confirm btn-primary btn-tny')]").click()
     #更改排序方式
     driver.find_element_by_xpath('//*[@id="container-main"]/div[3]/div/div[1]/div/div[2]/div[1]/a').click()
-    driver.find_element_by_xpath("//a[text()='按完成度']").click()
+    driver.find_element_by_xpath("//a[text()='By Completion']").click()
     #得到文本目标
     suma_td=driver.find_element_by_xpath('//*[@id="summary-text"]')
     today = suma_td.get_property('value')
@@ -128,7 +128,7 @@ def get_thiswk(driver):
 
 def initlog():
     today = datetime.date.today()
-    logadress='D:\Workspace\TeleMaster/logs/%s/'%today
+    logadress='/home/pi/TeleMaster/logs/%s/'%today
     try:
         os.mkdir(logadress)
     except (FileExistsError,FileNotFoundError) as e:
