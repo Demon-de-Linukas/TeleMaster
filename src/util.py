@@ -17,8 +17,8 @@ from csv import Error
 
 logPath = 'cache.csv'
 fieldnames = ['userID','status','summary','time','star','comment']
-path_of_logindata = '/home/pi/loginData.csv'
-#path_of_logindata = 'D:/Workspace/loginData.csv'
+#path_of_logindata = '/home/pi/loginData.csv'
+path_of_logindata = 'D:/Workspace/loginData.csv'
 
 
 def login(username, password,headless,linux):
@@ -65,7 +65,7 @@ def get_Summary(driver, timeRef):
     while i<6:
         if timeRef not in days.text:
             days.click()
-            driver.find_element_by_xpath('/html/body/div[10]/div/div/ul/li[%s]/a'%i).click()
+            driver.find_element_by_xpath('/html/body/div[11]/div/div/ul/li[%s]/a'%i).click()
             time.sleep(1)
             days = driver.find_element_by_xpath(
                 '//*[@id="container-main"]/div[3]/div/div[1]/div/div[1]/div[1]/div/a/span')
@@ -128,7 +128,7 @@ def get_thiswk(driver):
 
 def initlog():
     today = datetime.date.today()
-    logadress='/home/pi/TeleMaster/logs/%s/'%today
+    logadress='./logs/%s/'%today
     try:
         os.mkdir(logadress)
     except (FileExistsError,FileNotFoundError) as e:

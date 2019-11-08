@@ -15,7 +15,7 @@ sys.path.append("/home/pi/TeleMaster/")
 from src import util as ut
 from src import onedrive
 from src.template import head,td_html,wk_html
-path_of_log='/home/pi/TeleMaster'
+path_of_log='D:\Workspace\TeleMaster'
 path = ut.path_of_logindata
 
 time.sleep(30)
@@ -33,7 +33,7 @@ username, password=ut.getUserData(path,'tick')
 logger.info('--> Initiating OneDrive Client')
 client = onedrive.init_onedrive()
 logger.info('--> Initiating Ticktick Client')
-driver = ut.login(username, password, headless=True, linux=True)
+driver = ut.login(username, password, headless=False, linux=True)
 time.sleep(8)
 
 
